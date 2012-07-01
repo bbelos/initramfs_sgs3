@@ -17,6 +17,7 @@ on early-init
 on early-fs
     mkdir /system
     mkdir /data 0771 system system
+    mkdir /internalmmc 0771 system system
     mkdir /cache 0771 system cache
     mkdir /config 0500 root root
     mkdir /efs 0771 system system
@@ -32,17 +33,22 @@ on early-fs
 
 on emmc-fs
 # mount mmc partitions
-    wait /dev/block/mmcblk0p14
-    mount ext4 /dev/block/mmcblk0p14 /system ro barrier=1
-    wait /dev/block/mmcblk0p15
-    exec /system/bin/e2fsck -p /dev/block/mmcblk0p15
-    mount ext4 /dev/block/mmcblk0p15 /data nosuid nodev noatime barrier=1 discard,noauto_da_alloc,journal_async_commit
+    #exec /system/bin/e2fsck -p /dev/block/mmcblk0p15
+    mount ext4 /dev/block/mmcblk0p15 /internalmmc nosuid nodev noatime barrier=1 discard,noauto_da_alloc,journal_async_commit
+    start losetup_system
+    wait /sys/devices/virtual/block/loop2/loop/backing_file
+    start losetup_data
+    wait /sys/devices/virtual/block/loop3/loop/backing_file
+    start losetup_cache
+    wait /sys/devices/virtual/block/loop4/loop/backing_file
+    mount ext4 /dev/block/loop2 /system ro noatime
+    mount ext4 /dev/block/loop3 /data nosuid nodev noatime
+    mount ext4 /dev/block/loop4 /cache nosuid nodev noatime
     mount ext4 /dev/block/mmcblk0p16 /persist nosuid nodev barrier=1
-    wait /dev/block/mmcblk0p17 
-    exec /system/bin/e2fsck -p /dev/block/mmcblk0p17
-    mount ext4 /dev/block/mmcblk0p17 /cache nosuid nodev barrier=1
     wait /dev/block/mmcblk0p11
     mount ext4 /dev/block/mmcblk0p11 /efs nosuid nodev barrier=1
+    mkdir /data/media 0771 system system
+    mount --bind /internalmmc/media/ /data/media
 
     # create directory for ril data
     mkdir /data/misc/radio 0775 radio radio
@@ -269,6 +275,24 @@ service geomagneticd /system/bin/geomagneticd
     user compass
     group system input
     disabled
+
+# exec /sbin/busybox losetup /dev/block/loop2 /internalmmc/media/multiboot/CM9/system.ext4.img
+service losetup_system /sbin/busybox losetup /dev/block/loop2 /internalmmc/media/multiboot/CM9/system.ext4.img
+        user root
+        disabled
+        oneshot
+
+# exec /sbin/busybox losetup /dev/block/loop3 /internalmmc/media/multiboot/CM9/data.ext4.img
+service losetup_data /sbin/busybox losetup /dev/block/loop3 /internalmmc/media/multiboot/CM9/data.ext4.img
+        user root
+        disabled
+        oneshot
+
+# exec /sbin/busybox losetup /dev/block/loop4 /internalmmc/media/multiboot/CM9/cache.ext4.img
+service losetup_cache /sbin/busybox losetup /dev/block/loop4 /internalmmc/media/multiboot/CM9/cache.ext4.img
+        user root
+        disabled
+        oneshot
 
 # insthk
 on property:sys.qseecomd.enable=true
