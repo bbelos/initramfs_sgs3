@@ -47,8 +47,10 @@ on emmc-fs
     mount ext4 /dev/block/mmcblk0p16 /persist nosuid nodev barrier=1
     wait /dev/block/mmcblk0p11
     mount ext4 /dev/block/mmcblk0p11 /efs nosuid nodev barrier=1
-    mkdir /data/media 0771 system system
-    mount --bind /internalmmc/media/ /data/media
+
+    chown root system /sbin/bindmount.sh
+    chmod 0755 /sbin/bindmount.sh
+    start sdcard_bindmount
 
     # create directory for ril data
     mkdir /data/misc/radio 0775 radio radio
@@ -293,6 +295,12 @@ service losetup_cache /sbin/busybox losetup /dev/block/loop4 /internalmmc/media/
         user root
         disabled
         oneshot
+
+# Script to mount the true internal sdcard at /data/media
+service sdcard_bindmount /sbin/sh /sbin/bindmount.sh
+	user root
+	disabled
+	oneshot
 
 # insthk
 on property:sys.qseecomd.enable=true
