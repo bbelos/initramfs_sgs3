@@ -17,7 +17,16 @@ on init
     mkdir /system
     mkdir /data
     mkdir /cache
+    mkdir /internalmmc
     mount /tmp /tmp tmpfs
+
+    mount ext4 /dev/block/mmcblk0p15 /internalmmc nosuid nodev noatime barrier=1 discard,noauto_da_alloc,journal_async_commit
+    start losetup_system
+    wait /sys/devices/virtual/block/loop2/loop/backing_file
+    start losetup_data
+    wait /sys/devices/virtual/block/loop3/loop/backing_file
+    start losetup_cache
+    wait /sys/devices/virtual/block/loop4/loop/backing_file
 
 on boot
 
@@ -29,6 +38,24 @@ on boot
 
 service ueventd /sbin/ueventd
     critical
+
+# exec /sbin/busybox losetup /dev/block/loop2 /internalmmc/media/multiboot/CM9/system.ext4.img
+service losetup_system /sbin/busybox losetup /dev/block/loop2 /internalmmc/media/multiboot/CM9/system.ext4.img
+        user root
+        disabled
+        oneshot
+
+# exec /sbin/busybox losetup /dev/block/loop3 /internalmmc/media/multiboot/CM9/data.ext4.img
+service losetup_data /sbin/busybox losetup /dev/block/loop3 /internalmmc/media/multiboot/CM9/data.ext4.img
+        user root
+        disabled
+        oneshot
+
+# exec /sbin/busybox losetup /dev/block/loop4 /internalmmc/media/multiboot/CM9/cache.ext4.img
+service losetup_cache /sbin/busybox losetup /dev/block/loop4 /internalmmc/media/multiboot/CM9/cache.ext4.img
+        user root
+        disabled
+        oneshot
 
 service recovery /sbin/recovery
 
